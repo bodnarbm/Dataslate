@@ -1,0 +1,95 @@
+/* CSS file */
+ToolTip
+{
+	backgroundColor: #000000;
+	color: #00CC00;
+	font-family: "OCR A Std";
+	fontSize: 10;
+}
+
+NumericStepper
+{
+	disabledColor: #000000;
+	backgroundColor: #000000;
+}
+Alert
+{
+	backgroundColor: #000000;
+	button-style-name: "alertButton";
+}
+
+.alertButton
+{
+	color:#ffffff;	
+}
+
+TextInput
+{
+	backgroundColor: #000000;
+	color: #00CC00;
+	fontFamily: "OCR A Std";
+	fontSize: 12;
+}
+TextArea
+{
+	backgroundColor: #000000;
+	color: #00CC00;
+	fontFamily: "OCR A Std";
+	fontSize: 12;
+}
+@font-face
+{
+	fontFamily: "OCR A Std";
+	fontWeight: normal;
+	fontStyle: normal;
+	src: local("OCR A Std");
+}
+Label
+{
+	color: #FFFFFF;
+	fontFamily: Georgia;
+	fontSize: 26;
+	textDecoration: underline;
+}
+Label.combatTypeRenderer
+{
+	fontSize: 12;
+	textDecoration: normal;
+}
+DataGrid
+{
+	headerColors: #000000, #000000;
+	headerStyleName: dataGridHeader;
+	fontFamily: "OCR A Std";
+	color: #00CC00;
+	alternatingItemColors: #000000, #0C0C0C;
+	selectionColor: #00CC00;
+	textRollOverColor: #000000;
+	textSelectedColor: #000000;
+	rollOverColor: #009900;
+	fontSize: 12;
+}
+.dataGridHeader
+{
+	fontFamily: "OCR A Std";
+	fontSize: 14;
+	color: #00CC00;
+}
+Button
+{
+	fillAlphas: 1.0, 1.0;
+	fillColors: #000000, #000000;
+	fontSize: 14;
+	fontFamily: Georgia;
+	color: #FFFFFF;
+	themeColor: #00CC00;
+	fontWeight: normal;
+	textRollOverColor: #FFFFFF;
+	textSelectedColor: #2A2A2A;
+}
+TitleWindow
+{
+	backgroundColor: #000000;
+	horizontalAlign: center;
+	verticalAlign: middle;
+}

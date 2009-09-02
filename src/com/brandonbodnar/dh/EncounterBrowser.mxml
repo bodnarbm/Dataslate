@@ -1,0 +1,86 @@
+<?xml version="1.0" encoding="utf-8"?>
+<mx:TitleWindow xmlns:mx="http://www.adobe.com/2006/mxml" showCloseButton="true" width="600" height="400" close="closeDialog(event)" creationComplete="init()">
+	
+	<mx:Script>
+		<![CDATA[
+			import mx.events.ItemClickEvent;
+			import mx.collections.ArrayCollection;
+			import mx.controls.Alert;
+			import mx.managers.PopUpManager;
+			import mx.events.CloseEvent;
+			
+			[Bindable]
+			private var encounters:ArrayCollection = new ArrayCollection();
+			
+			[Bindable]
+			public var loadOnly:Boolean = false;
+			
+			private function init():void {
+				var encounterDirectory:File = File.applicationStorageDirectory;
+				encounterDirectory = encounterDirectory.resolvePath("Encounters");
+				if(!encounterDirectory.exists) {
+					encounterDirectory.createDirectory();
+				}
+				
+				for each ( var file:File in encounterDirectory.getDirectoryListing()) {
+					if(file.extension.toUpperCase() == "XML") {
+						encounters.addItem(file);
+					}
+				}
+				
+			}
+			
+			private function getBaseName(item:Object):String {
+				var file:File = item as File;
+				var name:String = file.name;
+				return name.substr(0,name.length - 4);
+			}
+			
+			private function closeDialog(event:CloseEvent):void {
+				
+				PopUpManager.removePopUp(this);
+			}
+			
+			private function deleteFile(event:CloseEvent):void {
+				if(event.detail == Alert.YES) {
+					var file:File = encounterList.selectedItem as File;
+					encounters.removeItemAt(encounterList.selectedIndex);
+					file.deleteFile();
+				}
+			}
+			
+			private function deleteEncounter():void {
+				var file:File = encounterList.selectedItem as File;
+				var result:Alert = Alert.show("Are you sure you wish to delete: " + getBaseName(file), "Test", Alert.YES | Alert.NO, this,deleteFile);
+			}
+			
+			private function newEncounter():void {
+				var newEncounter:Event = new Event("newEncounter");
+				this.dispatchEvent(newEncounter);
+				closeDialog(null);
+			}
+			
+			private function loadEncounter():void {
+				
+				var encounter:File = encounterList.selectedItem as File;
+				
+				if(encounter == null) {
+					Alert.show("Select an encounter first");
+					return;
+					
+				}
+				var loadedEvent:EncounterLoadedEvent = new EncounterLoadedEvent("fileLoaded", encounter);
+				
+				this.dispatchEvent(loadedEvent);
+				closeDialog(null);
+			}
+		]]>
+	</mx:Script>
+	<mx:Label text="Choose Encounter:" textAlign="left" color="#FFFFFF" fontFamily="Georgia" fontSize="18" width="100%"/>
+	<mx:List id="encounterList" height="100%" width="100%" backgroundColor="#000000" fontFamily="Courier New" fontSize="16" color="#00CC00" dataProvider="{encounters}" rollOverColor="#00cc00" textRollOverColor="#000000" selectionColor="#00cc00" textSelectedColor="#000000" fontWeight="normal" labelFunction="getBaseName"/>
+	<mx:HBox width="100%">
+		<mx:Button label="Load Encounter" width="100%" fontFamily="Georgia" fontSize="14" color="#FFFFFF" fillAlphas="[1.0, 1.0]" fillColors="[#000000, #000000]" click="loadEncounter()"/>
+				<mx:Button enabled="{!loadOnly}" label="New Encounter" width="100%" fontFamily="Georgia" fontSize="14" color="#FFFFFF" fillAlphas="[1.0, 1.0]" fillColors="[#000000, #000000]" click="newEncounter()"/>
+						<mx:Button enabled="{!loadOnly}" label="Delete Encounter" width="100%" fontFamily="Georgia" fontSize="14" color="#FFFFFF" fillAlphas="[1.0, 1.0]" fillColors="[#000000, #000000]" click="deleteEncounter()"/>
+	</mx:HBox>
+</mx:TitleWindow>

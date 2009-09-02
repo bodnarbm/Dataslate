@@ -1,0 +1,161 @@
+<?xml version="1.0" encoding="utf-8"?>
+<mx:WindowedApplication xmlns:mx="http://www.adobe.com/2006/mxml" layout="absolute" xmlns:ns1="*" width="800" height="600" xmlns:dh="com.brandonbodnar.dh.*"
+	applicationComplete="init()" close="dispose()">
+	<mx:states>
+		<mx:State name="EncounterSetup">
+			<mx:AddChild relativeTo="{canvas1}">
+				<dh:EncounterSetup id="encouterSetupView"/>
+			</mx:AddChild>			
+			<mx:AddChild relativeTo="{applicationcontrolbar1}" position="lastChild">
+				<mx:Spacer width="100%"/>
+			</mx:AddChild>
+			<mx:AddChild relativeTo="{applicationcontrolbar1}" position="lastChild">
+				<mx:Button label="New" height="75%" click="encouterSetupView.newEncounter(null)" />
+			</mx:AddChild>
+			<mx:AddChild relativeTo="{applicationcontrolbar1}" position="lastChild">
+				<mx:Button label="Save" height="75%" click="saveEncounter()" id="button1"/>
+			</mx:AddChild>
+			<mx:AddChild relativeTo="{button1}" position="before">
+				<mx:Button label="Load" height="75%" click="encouterSetupView.openEncounter()" />
+			</mx:AddChild>
+			<mx:RemoveChild target="{textarea1}"/>
+			<mx:RemoveChild target="{label1}"/>
+		</mx:State>
+		<mx:State name="Roster">
+			<mx:AddChild relativeTo="{canvas1}" position="lastChild">
+				<dh:MissionRoster id="rosterView" />
+			</mx:AddChild>
+			<mx:AddChild relativeTo="{applicationcontrolbar1}" position="lastChild">
+				<mx:Spacer width="100%"/>
+			</mx:AddChild>
+			<mx:RemoveChild target="{textarea1}"/>
+			<mx:RemoveChild target="{label1}"/>
+			<mx:enterState>
+				<![CDATA[
+					rosterView.retinue = this.retinue;
+				]]>
+			</mx:enterState>
+		</mx:State>
+		<mx:State name="Action Report">
+			<mx:AddChild relativeTo="{canvas1}" position="lastChild">
+				<dh:ActionReport id="actionReportView" retinue="{retinue}"/>
+			</mx:AddChild>
+			<mx:AddChild relativeTo="{applicationcontrolbar1}" position="lastChild">
+				<mx:Spacer width="100%"/>
+			</mx:AddChild>
+			<mx:AddChild relativeTo="{applicationcontrolbar1}" position="lastChild">
+				<mx:Button label="Load" click="loadMission()" id="button2" toolTip="Load a pre made encounter"/>
+			</mx:AddChild>
+			<mx:AddChild relativeTo="{button2}" position="before">
+				<mx:Button label="Instant Action" click="instantAction()" toolTip="Load just the Players for unplanned combat"/>
+			</mx:AddChild>
+			<mx:RemoveChild target="{textarea1}"/>
+			<mx:RemoveChild target="{label1}"/>
+		</mx:State>
+	</mx:states>
+	<mx:Canvas x="0" y="100" width="100%" height="100%" id="canvas1" backgroundColor="#000000"  borderStyle="none">
+		<mx:TextArea height="325" width="400" x="{this.canvas1.width / 2 - 200}" y="{this.canvas1.height/2 - 150}" text="Welcome Lord Inquisitor,&#xa;&#xa;The report you requested regarding your Retinue is ready for your review.&#xa;&#xa;You will find information regarding intelligence gathered prior to the individual incidents that the Retinue encountered in the Mission Briefings section of the report. You may add incidents at any time as gather more intelligence about them.&#xa;&#xa;In the Acolyte Roster section, you will find information regarding the current status of your Retinue and its individual members.&#xa;&#xa;Lastly, in the Action Report section, there are tools to view the actual incident.&#xa;&#xa;Thank you,&#xa;&#xa;Engineseer Bodnar" id="textarea1" borderStyle="none"/>
+		<mx:Label text="BrandonBodnar.com © 2009" right="10" bottom="10" fontSize="16" fontStyle="italic" textDecoration="normal" color="#424242" id="label1"/>
+	</mx:Canvas>
+	<mx:Canvas width="100%" height="100" backgroundColor="#000000" id="canvas2">
+		<mx:ApplicationControlBar x="0" y="50" width="100%" height="50" id="applicationcontrolbar1">
+			<mx:Button label="Main Screen" height="100%" click="{this.currentState = ''}" />
+			<mx:Button label="Mission Briefings" height="100%" click="{this.currentState = 'EncounterSetup'}"  toolTip="Create Encounters"/>
+			<mx:Button label="Acolyte Roster" height="100%" click="{this.currentState = 'Roster'}"  toolTip="Manage Players"/>
+			<mx:Button label="Action Report" height="100%" click="{this.currentState = 'Action Report'}"  toolTip="Run an encounter"/>
+		</mx:ApplicationControlBar>
+		<mx:Label text="Personal Dataslate of the Lord Inquisitor" width="100%" height="50"  textAlign="center"  fontSize="33"/>
+	</mx:Canvas>
+	
+	<mx:Script>
+		<![CDATA[
+			
+			import com.brandonbodnar.dh.Retinue;
+			import com.brandonbodnar.dh.Acolyte;
+			import mx.collections.ArrayCollection;
+		
+			[Bindable]
+			public var retinue:Retinue;
+		
+			private function init():void {
+				
+				this.maximize();
+				
+				var file:File = File.applicationStorageDirectory;
+				file = file.resolvePath("roster.xml");
+				
+				if(!file.exists) {
+					retinue = new Retinue();
+					retinue.acolytes = new ArrayCollection();
+					retinue.name = "";
+					retinue.notes = "";
+					return;
+				}
+				
+				var fileStream:FileStream = new FileStream();
+				fileStream.open(file, FileMode.READ);
+				
+				var rosterXML:XML = XML(fileStream.readUTFBytes(fileStream.bytesAvailable));
+				var acolytes:ArrayCollection = new ArrayCollection();
+				
+				retinue = new Retinue();
+				
+				retinue.name = rosterXML.Name;
+				retinue.notes = rosterXML.Notes;					
+				
+				for each ( var acolyteXML:XML in rosterXML.Acolytes.Acolyte ) {
+					var acolyte:Acolyte = new Acolyte();
+					acolyte.name = acolyteXML.@name;
+					acolyte.wounds = acolyteXML.@wounds;
+					acolyte.notes = acolyteXML.@notes;
+					acolyte.agility = acolyteXML.@agility;
+					acolyte.currentDamage = acolyteXML.@currentDamage;
+					acolyte.currentHitCount = acolyteXML.@currentHitCount;
+					acolytes.addItem(acolyte);
+				}
+				retinue.acolytes = acolytes;
+			}
+			
+			private function dispose():void {
+				var acolytesXML:XML = <Acolytes></Acolytes>
+								
+				for each(var acolyte:Acolyte in retinue.acolytes) {
+					var acolyteXML:XML = <Acolyte name={acolyte.name} notes={acolyte.notes} wounds={acolyte.wounds} currentDamage={acolyte.currentDamage} currentHitCount={acolyte.currentHitCount} agility={acolyte.agility} />
+					acolytesXML.appendChild(acolyteXML);
+				}
+								
+				var xml:XML =
+					<Roster>
+						<Name>{retinue.name}</Name>
+						<Notes>{retinue.notes}</Notes>
+						{acolytesXML}										
+					</Roster>
+								
+				var file:File = File.applicationStorageDirectory;
+				file = file.resolvePath("roster.xml");
+								
+				var fileStream:FileStream = new FileStream();
+				fileStream.open(file, FileMode.WRITE);
+								
+				fileStream.writeUTFBytes(xml.toXMLString());
+				fileStream.close();
+			}
+		
+			private function saveEncounter():void {
+				encouterSetupView.checkForSave(false);
+			}
+			
+			private function loadMission():void {
+				actionReportView.load();
+			}
+			
+			private function instantAction():void {
+				actionReportView.quickEncounter();
+			}
+			
+		]]>
+	</mx:Script>
+	<mx:Style source="style.css"/>
+	
+	
+</mx:WindowedApplication>

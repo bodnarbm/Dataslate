@@ -1,0 +1,45 @@
+<?xml version="1.0" encoding="utf-8"?>
+<mx:TitleWindow xmlns:mx="http://www.adobe.com/2006/mxml" close="close(false)" showCloseButton="true" width="400" height="200" title="Quick Add Combatant">
+
+	<mx:Script>
+		<![CDATA[
+			import mx.managers.PopUpManager;
+			
+			
+			private var combatantBuilder:CombatantBuilderItem = new CombatantBuilderItem();
+			
+			public var callback:Function;
+			
+			public function close(save:Boolean):void {
+				PopUpManager.removePopUp(this);
+				
+				combatantBuilder.id = idInput.text;
+				combatantBuilder.agility = agilityStepper.value;
+				combatantBuilder.amount = amountStepper.value;
+				combatantBuilder.wounds = woundsStepper.value;
+				
+				if(callback != null && save) {
+					callback(combatantBuilder);	
+				}
+			}
+		]]>
+	</mx:Script>
+
+
+	<mx:HBox width="100%" horizontalGap="0">
+		<mx:Label text="Id:" textDecoration="normal" fontSize="12" width="60"/>
+		<mx:TextInput width="100%"  id="idInput"/>
+	</mx:HBox>
+	<mx:HBox width="100%" horizontalGap="0">
+		<mx:Label text="Amount:" textDecoration="normal" fontSize="12" width="60"/>
+		<mx:NumericStepper width="100%" minimum="1" maximum="255" id="amountStepper"/>
+		<mx:Label text="Wounds:" textDecoration="normal" fontSize="12" width="60"/>
+		<mx:NumericStepper width="100%" minimum="1" maximum="255" id="woundsStepper"/>
+		<mx:Label text="Agility:" textDecoration="normal" fontSize="12" width="60"/>
+		<mx:NumericStepper width="100%" minimum="1" maximum="100" id="agilityStepper"/>
+	</mx:HBox>
+	<mx:ControlBar>
+		<mx:Button label="Add" width="100%" click="close(true)"/>
+		<mx:Button label="Cancel" width="100%" click="close(false)"/>
+	</mx:ControlBar>
+</mx:TitleWindow>

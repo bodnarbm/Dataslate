@@ -1,0 +1,318 @@
+<?xml version="1.0" encoding="utf-8"?>
+<mx:HBox xmlns:mx="http://www.adobe.com/2006/mxml" width="100%" height="100%" horizontalGap="0">
+	<mx:Script></mx:Script>
+	<mx:VBox width="75%" height="100%" backgroundColor="#111111" horizontalAlign="center" horizontalGap="0">
+		<mx:Label text="Combatant Status" fontFamily="Georgia" color="#FFFFFF" fontSize="26" textAlign="center" textDecoration="underline" width="100%"/>
+		<mx:HBox width="100%" height="100%">
+			<mx:VBox width="100%" height="100%">
+				<mx:DataGrid id="combatantDataGrid" dataProvider="{combatantView}" width="100%" height="100%" editable="true"
+				dragEnabled="true" dropEnabled="true" dragMoveEnabled="true" sortableColumns="false">
+					<mx:columns>
+						<mx:DataGridColumn headerText="Initiative" editable="true" dataField="count" editorDataField="value">
+							<mx:itemEditor>
+								<mx:Component>
+									<mx:NumericStepper minimum="0" maximum="255" backgroundColor="#000000" color="#00cc00" />
+								</mx:Component>
+							</mx:itemEditor>
+						</mx:DataGridColumn>
+						<mx:DataGridColumn headerText="id" dataField="id" editable="false"/>
+						<mx:DataGridColumn id="woundsCol" headerText="Wounds" dataField="wounds" editable="false"/>
+						<mx:DataGridColumn headerText="Current" labelFunction="displayCurrent" editable="false"/>
+						<mx:DataGridColumn headerText="Critical" labelFunction="displayCritical" editable="false"/>
+						<mx:DataGridColumn id="damageCol" headerText="Damage" editable="false" dataField="damage" editorDataField="value">
+							<mx:itemEditor>
+								<mx:Component>
+									<mx:NumericStepper minimum="0" maximum="255"/>
+								</mx:Component>
+							</mx:itemEditor>
+						</mx:DataGridColumn>
+						<mx:DataGridColumn id="hitsCol" headerText="Hits" editable="false" dataField="hits" editorDataField="value">
+							<mx:itemEditor>
+								<mx:Component>
+									<mx:NumericStepper minimum="0" maximum="255"/>
+								</mx:Component>
+							</mx:itemEditor>
+						</mx:DataGridColumn>
+					</mx:columns>
+				</mx:DataGrid>
+				<mx:Button width="100%" id="addCombatantButton" label="Add Combatant" click="quickAdd()" enabled="false"/>
+				<mx:Button width="100%" id="removeCombatantButton" label="Remove Combatant" click="combatantView.removeItemAt(combatantDataGrid.selectedIndex)" enabled="false"/>
+			</mx:VBox>
+			<mx:VBox width="200" height="100%">
+				<mx:Label text="Holding Action" fontSize="14" >
+					<mx:toolTip>Drag combatant who held there action here. If they do not take an action before the end of round, they come in at the start of the round.</mx:toolTip>
+				</mx:Label>
+				<mx:DataGrid width="100%" height="100%" dataProvider="{holding}" dragEnabled="true" dropEnabled="true" dragMoveEnabled="true">
+					<mx:columns>
+						<mx:DataGridColumn dataField="id" headerText="Id"/>
+					</mx:columns>
+				</mx:DataGrid>
+				<mx:Label text="Out of Combat" fontSize="14" toolTip="Drag Combatants who are out of combat here."/>
+				<mx:DataGrid width="100%" height="100%" dataProvider="{outOfCombat}" dragEnabled="true" dropEnabled="true" dragMoveEnabled="true">
+					<mx:columns>
+						<mx:DataGridColumn dataField="id" headerText="Id"/>
+					</mx:columns>
+				</mx:DataGrid>
+				<mx:Label text="Reminders" fontSize="14" />
+				<mx:DataGrid id="reminderList" width="100%" height="100%" dataProvider="{reminders}" editable="true">
+					<mx:columns>
+						<mx:DataGridColumn dataField="round" headerText="Round" width="75" editorDataField="value">
+							<mx:itemEditor>
+								<mx:Component>
+									<mx:NumericStepper minimum="1" maximum="100" />
+								</mx:Component>
+							</mx:itemEditor>
+						</mx:DataGridColumn>
+						<mx:DataGridColumn dataField="message" headerText="Message" />
+					</mx:columns>
+				</mx:DataGrid>
+				<mx:Button  width="100%" label="Add Reminder" click="{reminders.addItem(new Reminder('[msg]', round+1))}" enabled="false" id="addButton"/>
+				<mx:Button  width="100%" label="Remove Reminder" click="{reminders.removeItemAt(reminderList.selectedIndex)}" enabled="false" id="removeButton"/>
+			</mx:VBox>
+		</mx:HBox>
+		<mx:Button label="Start Combat" width="100%" fillAlphas="[1.0, 1.0]" fillColors="[#000000, #000000]" fontFamily="Georgia" fontSize="14" color="#FFFFFF" id="combatButton" enabled="false" height="40">
+			
+		</mx:Button>
+		<mx:Spacer height="20"/>
+		
+	</mx:VBox>
+	
+	<mx:VBox width="35%" height="100%" backgroundColor="#1A241A" horizontalAlign="center">
+			<mx:Label text="Action Report" width="95%" fontSize="26" fontFamily="Georgia" color="#FFFFFF" textAlign="center" textDecoration="underline"/>
+			<mx:Label text="Round:" fontSize="22" width="95%"/>
+			<mx:Label textDecoration="normal" text="{round}"/>
+			<mx:Label text="Mission:" fontFamily="Georgia" fontSize="22" color="#FFFFFF" width="95%"/>
+			<mx:TextInput editable="false" backgroundColor="#000000" color="#00CC00" fontFamily="Courier New" fontSize="22" width="95%" id="encounterName"/>
+			<mx:Label text="Description:" fontSize="26" color="#FFFFFF" fontFamily="Georgia" width="95%" textDecoration="underline"/>
+			<mx:TextArea width="95%" backgroundColor="#000000" color="#00CC00" fontSize="14" fontFamily="Courier New" id="encounterDescription" height="100%"/>
+			<mx:Label text="Notes:" fontSize="26" color="#FFFFFF" fontFamily="Georgia" width="95%" textDecoration="underline"/>
+			<mx:TextArea width="95%" backgroundColor="#000000" color="#00CC00" fontSize="14" fontFamily="Courier New" id="encounterNotes" height="100%"/>
+			<mx:Spacer height="20"/>
+	</mx:VBox>
+	
+	<mx:Script>
+		<![CDATA[
+			import mx.controls.NumericStepper;
+			import mx.events.DataGridEventReason;
+			import mx.events.AdvancedDataGridEvent;
+			import mx.events.DataGridEvent;
+			import mx.controls.DataGrid;
+			import mx.controls.dataGridClasses.DataGridColumn;
+			import mx.controls.Alert;
+			import mx.managers.PopUpManager;
+			import mx.collections.ArrayCollection;
+			
+			
+			private var enemyCombatants:Array;
+			
+			[Bindable]
+			private var combatantView:ArrayCollection;
+			
+			[Bindable]
+			private var outOfCombat:ArrayCollection;
+			
+			[Bindable]
+			private var holding:ArrayCollection;
+			
+			[Bindable]
+			public var retinue:Retinue;
+			
+			[Bindable]
+			private var round:int;
+			
+			[Bindable]
+			private var reminders:ArrayCollection;
+			
+			private var marker:String = "END_OF_ROUND";
+			
+			public function load():void {
+				
+				var browser:EncounterBrowser = PopUpManager.createPopUp(this, EncounterBrowser, true) as EncounterBrowser;
+				PopUpManager.centerPopUp(browser);
+				browser.addEventListener("fileLoaded", loadEncounter);
+				browser.loadOnly = true;
+			}
+			
+			private function quickAdd():Boolean {
+								
+								var adder:QuickAdd = PopUpManager.createPopUp(this, QuickAdd, true) as QuickAdd;
+								adder.callback = addCombatant;
+								PopUpManager.centerPopUp(adder);
+								return true;
+			}
+			
+			public function addCombatant(combatantBuilder:CombatantBuilderItem):void {
+					for(var i:int = 0; i < combatantBuilder.amount; i++) {
+						var combatant:Combatant = new Combatant();
+						
+						combatant.name = combatantBuilder.id;
+						if( combatantBuilder.amount > 1 ) {
+							combatant.name += i;
+						}
+						combatant.agility = combatantBuilder.agility;
+						combatant.wounds = combatantBuilder.wounds;
+						
+						combatantView.addItemAt(new Initiative(combatant), 0);
+					}
+			}
+			
+			private function displayCurrent(item:Object, column:DataGridColumn):String {
+				var current:int = item.wounds - item.damage;
+				if(current < 0) return "0";
+				
+				return current.toString();
+			}
+			
+			private function combatSort(a:Initiative, b:Initiative):int {
+				if(a.count == b.count)
+					return a.agility - b.agility;
+				return a.count - b.count;
+			}
+						
+			private function startCombat(event:MouseEvent):void {
+				
+				enemyCombatants.sort(combatSort, Array.DESCENDING);
+				var endMark:Combatant = new Combatant();
+				endMark.name = marker;
+				enemyCombatants.unshift(new Initiative(endMark));
+				
+				damageCol.editable = true;
+				hitsCol.editable = true;
+				
+				combatButton.label = "Next Combatant";
+				combatButton.removeEventListener(MouseEvent.CLICK, startCombat);
+				combatButton.addEventListener(MouseEvent.CLICK, nextCombatant);
+				round = 0;
+				nextCombatant(null);
+				combatantDataGrid.invalidateList();
+				Alert.show("Combat has began", "Begin");
+				
+				
+			}
+			
+			private function nextCombatant(event:MouseEvent):void {
+				
+				enemyCombatants.push(enemyCombatants.shift());
+				
+				if(enemyCombatants[enemyCombatants.length-1].id == marker) {
+					nextRound();	
+				}
+				
+				combatantDataGrid.invalidateList();
+				combatantDataGrid.selectedIndex = -1;
+				
+				
+			}
+			
+			private function nextRound():void {
+				round++;
+				
+				while(holding.length != 0)
+				{
+					enemyCombatants.unshift(holding.removeItemAt(holding.length-1));
+				}
+				
+				
+				for each (var reminder:Reminder in reminders) {
+					if(reminder.round == round) {
+						Alert.show(reminder.message);
+						reminders.removeItemAt(reminders.getItemIndex(reminder));
+					}
+				}
+				
+			}
+			
+			private function displayCritical(item:Object, column:DataGridColumn):String {
+				var current:int = item.wounds - item.damage;
+				if(current < 0) return (-current).toString();
+				
+				return "0";
+			}
+			
+			private function loadUp():void {
+				combatButton.addEventListener(MouseEvent.CLICK, startCombat);
+				combatantView = new ArrayCollection(enemyCombatants);
+				combatButton.label = "Start Combatant";
+				combatButton.enabled = true;
+				combatButton.removeEventListener(MouseEvent.CLICK, nextCombatant);
+				combatButton.addEventListener(MouseEvent.CLICK, startCombat);
+				addButton.enabled = true;
+				removeButton.enabled = true;
+				addCombatantButton.enabled = true;
+				removeCombatantButton.enabled = true;
+				holding = new ArrayCollection();
+				outOfCombat = new ArrayCollection();
+			}
+			
+			private function loadEncounter(event:EncounterLoadedEvent):void {
+				var file:File = event.encounter;
+				if(file == null) return;
+				
+				
+				enemyCombatants = new Array();
+				
+				var fileStream:FileStream = new FileStream();
+				
+				for each (var acolyte:Acolyte in retinue.acolytes) {
+					enemyCombatants.push(new Initiative(acolyte));
+				}
+								
+				fileStream.open(file, FileMode.READ);
+				var encounterXML:XML = XML(fileStream.readUTFBytes(fileStream.bytesAvailable));
+									
+				encounterName.text = encounterXML.Name;
+				encounterDescription.text = encounterXML.Description;
+				encounterNotes.text = encounterXML.Notes;
+				
+				
+				for each ( var combatant:XML in encounterXML.Combatants.Combatant ) {
+					var amount:int = Number(combatant.@amount);
+					var wounds:int = Number(combatant.@wounds);
+					var agility:int = Number(combatant.@agility);
+					for(var i:int = 0; i < amount; i++) {
+						var id:String = combatant.@id;
+						
+						if(amount > 1) {
+							id += i;
+						}
+												
+						var enemy:Combatant = new Combatant();
+						enemy.name = id;
+						enemy.agility = agility;
+						enemy.wounds = wounds;
+						enemy.currentDamage = 0;
+						enemyCombatants.push(new Initiative(enemy));
+					}
+				}
+				
+				reminders = new ArrayCollection();
+				for each (var reminderXML:XML in encounterXML.Reminders.Reminder) {
+					var reminder:Reminder = new Reminder(reminderXML.@message, reminderXML.@round );
+					reminders.addItem(reminder);
+				}
+				
+				
+				fileStream.close();
+				loadUp();
+				
+			}
+			
+			public function quickEncounter():void {
+				
+				
+				enemyCombatants = new Array();
+				
+				
+				for each (var acolyte:Acolyte in retinue.acolytes) {
+					enemyCombatants.push(new Initiative(acolyte));
+				}
+				
+				reminders = new ArrayCollection();
+				
+				loadUp();
+				
+			}
+		]]>
+	</mx:Script>
+	
+</mx:HBox>

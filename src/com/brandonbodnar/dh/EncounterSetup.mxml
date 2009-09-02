@@ -1,0 +1,273 @@
+<?xml version="1.0" encoding="utf-8"?>
+	<mx:HBox xmlns:mx="http://www.adobe.com/2006/mxml" width="100%" height="100%" horizontalGap="0" >
+					<mx:VBox x="0" y="0" height="100%" width="75%" color="#171717" backgroundColor="#111111" verticalGap="2" horizontalAlign="center">
+						<mx:Label text="Name:" height="35" width="95%" />
+						<mx:TextInput width="95%" id="encounterName" change="{changed=true}"/>
+						<mx:Spacer height="2%"/>
+						<mx:Label text="Description:" height="35" width="95%"/>
+						<mx:TextArea width="95%" height="33%" id="encounterDescription" change="{changed=true}"/>
+						<mx:Spacer height="2%"/>
+						<mx:Label x="10" y="298" text="Notes:" height="35" width="95%" />
+						<mx:TextArea width="95%" bottom="10" height="33%" id="encounterNotes" change="{changed=true}"/>
+					</mx:VBox>
+					
+					<mx:VBox width="35%" height="100%" backgroundColor="#1A241A" horizontalAlign="center">
+						<mx:Label text="Combatants" >
+							<mx:toolTip>Id: Name of Combatant&#13;Amount: Number of these types in this encounter&#13;Wounds: Starting Wounds(Health)&#13;Agility: Used to break ties in Initiative</mx:toolTip>
+						</mx:Label>
+						<mx:DataGrid id="combatantList" dataProvider="{combatants}" width="100%" height="100%" change="{changed=true}" editable="true">
+							<mx:columns>
+								<mx:DataGridColumn dataField="id" headerText="Id"/>
+								<mx:DataGridColumn dataField="amount" headerText="Amount" editorDataField="value">
+									<mx:itemEditor>
+										<mx:Component>
+											<mx:NumericStepper minimum="1" maximum="99" />
+										</mx:Component>
+									</mx:itemEditor>
+								</mx:DataGridColumn>
+								<mx:DataGridColumn dataField="wounds" headerText="Wounds" editorDataField="value">
+									<mx:itemEditor>
+										<mx:Component>
+											<mx:NumericStepper minimum="1" maximum="99" />
+										</mx:Component>
+									</mx:itemEditor>
+								</mx:DataGridColumn>
+								<mx:DataGridColumn dataField="agility" headerText="Agility" editorDataField="value">
+									<mx:itemEditor>
+										<mx:Component>
+											<mx:NumericStepper minimum="1" maximum="99" />
+										</mx:Component>
+									</mx:itemEditor>
+								</mx:DataGridColumn>
+							</mx:columns>
+						</mx:DataGrid>
+						<mx:Button label="Add Combatant" width="100%" color="#FFFFFF" fillAlphas="[1.0, 1.0]" fillColors="[#000000, #000000]" click="addCombatant()" keyDown="{ if(event.keyCode == Keyboard.ENTER) addCombatant() }" height="30"/>
+						<mx:Button label="Remove Combatant" width="100%" color="#FFFFFF" fillAlphas="[1.0, 1.0]" fillColors="[#000000, #000000]" click="removeCombatant()" keyDown="{ if(event.keyCode == Keyboard.ENTER) removeCombatant() }" height="30"/>
+						<mx:Label text="Scripted Reminders" >
+							<mx:toolTip>These will display at the start of the stated round to remind of your message</mx:toolTip>
+						</mx:Label>
+						<mx:DataGrid id="reminderList" dataProvider="{reminders}" width="100%" height="100%" change="{changed=true}" editable="true">
+							<mx:columns>
+								<mx:DataGridColumn dataField="round" headerText="Round" editorDataField="value" width="75">
+									<mx:itemEditor>
+										<mx:Component>
+											<mx:NumericStepper minimum="1" maximum="99" />
+										</mx:Component>
+									</mx:itemEditor>
+								</mx:DataGridColumn>
+								<mx:DataGridColumn dataField="message" headerText="Message" />
+							</mx:columns>
+						</mx:DataGrid>
+						<mx:Button label="Add Reminder" width="100%" color="#FFFFFF" fillAlphas="[1.0, 1.0]" fillColors="[#000000, #000000]" click="addReminder()" keyDown="{ if(event.keyCode == Keyboard.ENTER) addReminder() }" height="30"/>
+						<mx:Button label="Remove Reminder" width="100%" color="#FFFFFF" fillAlphas="[1.0, 1.0]" fillColors="[#000000, #000000]" click="removeReminder()" keyDown="{ if(event.keyCode == Keyboard.ENTER) removeReminder() }" height="30"/>
+					</mx:VBox>
+					
+					<mx:Script>
+						<![CDATA[
+							import mx.graphics.RoundedRectangle;
+							import mx.events.CloseEvent;
+							import mx.core.Application;
+							import com.brandonbodnar.dh.EncounterLoadedEvent;
+							import mx.containers.TitleWindow;
+							import com.brandonbodnar.dh.EncounterBrowser;
+							import mx.managers.PopUpManager;
+							import mx.managers.BrowserManager;
+							import com.brandonbodnar.dh.CombatantBuilderItem;
+							import mx.controls.Alert;
+							import mx.collections.ArrayCollection;
+							
+							
+							[Bindable]
+							private var combatants:ArrayCollection = new ArrayCollection();
+							
+							[Bindable]
+							private var reminders:ArrayCollection = new ArrayCollection();
+							
+							private var changed:Boolean = false;
+							private var erasing:Boolean = false;
+							private var encounterToLoad:File = null;
+							
+							private function addCombatant():void {
+								combatants.addItem(new CombatantBuilderItem());
+							}
+							
+							private function addReminder():void {
+								reminders.addItem(new Reminder("[Enter Msg]", 1));
+							}
+							
+							private function removeCombatant():void {
+								combatants.removeItemAt(combatantList.selectedIndex);
+							}
+							
+							private function removeReminder():void {
+								reminders.removeItemAt(reminderList.selectedIndex);
+							}
+							
+							public function newEncounter(event:Event):void {
+								if(changed) 
+									Alert.show("Would you like to save your changes first?", "Save Changes", Alert.YES | Alert.NO | Alert.CANCEL, this, makeNewEncounter, null, Alert.YES);
+								else
+									makeNewEncounter(null);
+								
+							}
+							
+							public function makeNewEncounter(event:CloseEvent):void {
+								if(event != null && event.detail == Alert.YES) {
+									checkForSave(true);
+									return;	
+								}
+								
+								if(event != null && event.detail == Alert.CANCEL) {
+									return;
+								}
+								
+								
+								combatants.removeAll();
+								encounterDescription.text = "";
+								encounterNotes.text = "";
+								encounterName.text = "";
+							}
+							
+							public function openEncounter():Boolean {
+								
+								var browser:EncounterBrowser = PopUpManager.createPopUp(this, EncounterBrowser, true) as EncounterBrowser;
+								PopUpManager.centerPopUp(browser);
+								browser.addEventListener("fileLoaded", loadEncounter);
+								browser.addEventListener("newEncounter", newEncounter);
+								return true;
+							}
+							
+							public function checkForSave(erase:Boolean):void {
+								var file:File = File.applicationStorageDirectory;
+								file = file.resolvePath("Encounters/" + encounterName.text + ".xml");
+								erasing = erase
+								
+								if(file.exists) Alert.show("Okay to overwrite encounter?", "WARNING: Encounter already exists", Alert.YES | Alert.NO, this, saveEncounter, null, Alert.YES);
+								else saveEncounter(null);
+							}
+							
+							private function save():void {
+								var combatantsXML:XML = <Combatants></Combatants>
+								
+								for (var i:int = 0; i < combatants.length; i++) {
+									var combatant:Object = combatants.getItemAt(i);	
+									var combatantXML:XML = <Combatant id={combatant["id"]} amount={combatant["amount"]} wounds={combatant["wounds"]} agility={combatant["agility"]} />
+									combatantsXML.appendChild(combatantXML);
+								}
+								
+								var remindersXML:XML = <Reminders></Reminders>
+								
+								for each (var reminder:Reminder in reminders) {	
+									var reminderXML:XML = <Reminder round={reminder.round} message={reminder.message} />
+									remindersXML.appendChild(reminderXML);
+								}
+								
+								var xml:XML =
+									<Encounter>
+										<Name>{encounterName.text}</Name>
+										<Description>{encounterDescription.text}</Description>
+										<Notes>{encounterNotes.text}</Notes>
+										{combatantsXML}
+										{remindersXML}									
+									</Encounter>
+								
+								var file:File = File.applicationStorageDirectory;
+								file = file.resolvePath("Encounters/" + encounterName.text + ".xml");
+								
+								var fileStream:FileStream = new FileStream();
+								fileStream.open(file, FileMode.WRITE);
+								
+								fileStream.writeUTFBytes(xml.toXMLString());
+								fileStream.close();
+								changed = false;
+							}
+							
+							public function saveEncounter(event:CloseEvent):Boolean {
+								
+								if(event != null && event.detail == Alert.NO) return false;
+								
+								if(encounterName.text == "") {
+									Alert.show("Must enter encounter name before you can save");
+									return false;
+								}
+								
+								save();
+								
+								if(erasing) {
+									combatants.removeAll();
+									encounterDescription.text = "";
+									encounterNotes.text = "";
+									encounterName.text = "";
+									erasing = false;
+								}
+								
+								if(encounterToLoad != null) {
+									load()
+								}
+								
+								return true;
+							}
+							
+							private function load():void {
+								var fileStream:FileStream = new FileStream();
+									fileStream.open(encounterToLoad, FileMode.READ);
+									var encounterXML:XML = XML(fileStream.readUTFBytes(fileStream.bytesAvailable));
+									
+									encounterName.text = encounterXML.Name;
+									encounterDescription.text = encounterXML.Description;
+									encounterNotes.text = encounterXML.Notes;
+									
+									combatants.removeAll();
+									for each ( var combatant:XML in encounterXML.Combatants.Combatant ) {
+										var builder:CombatantBuilderItem = new CombatantBuilderItem();
+										builder.id = combatant.@id;
+										builder.amount = combatant.@amount;
+										builder.wounds = combatant.@wounds;
+										builder.agility = combatant.@agility;
+										combatants.addItem(builder);
+									}
+									
+									reminders.removeAll();
+									for each (var reminderXML:XML in encounterXML.Reminders.Reminder ) {
+										var reminder:Reminder = new Reminder(reminderXML.@message,reminderXML.@round);
+										reminders.addItem(reminder);
+									}
+									
+									changed = false;
+									encounterToLoad = null;
+							}
+							
+							public function loadUpEncounter(event:CloseEvent):void {
+								if(event != null && event.detail == Alert.YES) {
+									checkForSave(true);
+									return;	
+								}
+								
+								if(event != null && event.detail == Alert.CANCEL) {
+									return;
+								}
+								
+								
+								load();
+							}
+							
+							private function loadEncounter(event:Event):void {
+								var encounterLoadedEvent:EncounterLoadedEvent = event as EncounterLoadedEvent;
+								var encounter:File = encounterLoadedEvent.encounter;
+								if(encounter != null) {
+										encounterToLoad = encounter;
+										if(changed) { 
+											Alert.show("Would you like to save your changes first?", "Save Changes", Alert.YES | Alert.NO | Alert.CANCEL, this, loadUpEncounter, null, Alert.YES);
+										}
+										else {
+											load();
+										} 
+								}
+								
+							}
+						]]>
+					</mx:Script>
+					
+					
+	</mx:HBox>
+
